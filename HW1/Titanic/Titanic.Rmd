@@ -1,0 +1,205 @@
+---
+title: "Titanic"
+author: "Tianyuan Liu, Bochen Wang"
+date: "September 2, 2015"
+output: pdf_document
+---
+
+# Introduction
+
+This is the second part of programming assignment 1.
+
+## Data Cleaning
+Load required R libraries and read data
+```{r, warning=FALSE, message=FALSE}
+require(plyr)
+require(ggplot2)
+set.seed(35)
+readData <- function(fileName) {
+    data <- read.csv(file = fileName, header = T, na.strings=c("","NA"))
+    data$PassengerId <- as.integer(data$PassengerId)
+    data$Pclass <- as.factor(data$Pclass)
+    data$Ticket <- as.character(data$Ticket)
+    data$Name <- as.character(data$Name)
+    data$Cabin <- as.character(data$Cabin)
+    data
+}
+train <- readData(fileName = "./train.csv")
+train$Survived <- as.factor(train$Survived)
+summary(train)
+```
+
+## Data Visulization and Feature Engineering
+
+### Age and Survived rate
+```{r, echo=FALSE, warning=FALSE}
+ggplot(train, aes(Survived, Age)) + geom_boxplot()
+```
+
+
+### Pclass is a good indicator
+Using the plot method suggested by this [article](https://www.kaggle.com/benhamner/titanic/exploratory-analysis-in-r), I managed to plot the relationship between survived and Pclass.
+```{r}
+mosaicplot(train$Pclass ~ train$Survived, main="Passenger Survival by Class",
+           color=c("#8dd3c7", "#fb8072"), shade=FALSE,  xlab="", ylab="",
+           off=c(0), cex.axis=1.4)
+```
+
+### Ignore Cabin feature
+```{r, message=FALSE, warning=FALSE}
+require(Hmisc)
+describe(train$Cabin)
+```
+The missing data in **Cabin** is too much to interpolate, thus we will not use it as a feature in training model.
+ 
+### Extracting titles from Name
+```{r}
+head(train$Name)
+```
+According to [one tutorial](https://github.com/wehrley/wehrley.github.io/blob/master/SOUPTONUTS.md) on this challenge, the [Wikipedia entry](http://en.wikipedia.org/wiki/Master_%28form_of_address%29) for the [English honorific](http://en.wikipedia.org/wiki/English_honorific) "Master" explains that,
+```sh
+By the late 19th century, etiquette dictated that men be addressed as Mister,
+and boys as Master.
+```
+
+So I extracted the title feature from **Name**. And group 'same' titles together according to the rules suggested by [this article](https://github.com/wehrley/wehrley.github.io/blob/master/SOUPTONUTS.md)
+
+```{r}
+extractTitle <- function(data) {
+    title <- sapply(data$Name, FUN = function(x) {strsplit(x, split="[.,]")[[1]][2]
+                                                  })
+    title <- gsub("^\\s+|\\s+$", "", title)
+    title
+}
+groupTitle <- function(data, oldTitles, newTitle) {
+    for (title in oldTitles) {
+        data[data$Title == title, "Title"] <- newTitle
+    }
+    data$Title
+}
+
+train$Title <- extractTitle(train)
+train$Title <- groupTitle(train, c("Capt", "Col", "Don", 
+                                   "Dr", "Jonkheer", "Lady", 
+                                   "Major", "Rev", "Sir"), "Upper Class")
+train$Title <- groupTitle(train, c("the Countess", "Ms"), "Mrs")
+train$Title <- groupTitle(train, c("Mlle", "Mme"), "Miss")
+train$Title <- as.factor(train$Title)
+```
+
+
+### Impute null values in Age field and Embarked Field
+```{r}
+summary(train$Age)
+```
+If we look at the **Age** field, there are a lot of missing values. I interpolate on a **per-title** basis, and used **impute** method from **Hmisc** package.
+
+```{r}
+imputeAge <- function(data) {
+    age <- data$Age
+    for (title in unique(data$Title)) {
+        age[data$Title == title] <- impute(age[data$Title == title], fun = median)
+    }
+    age
+}
+train$Age <- imputeAge(train)
+```
+
+There is only two field missing in **Embarked**, I impute them with 'S', since 'S' is the most common element.
+```{r}
+train[is.na(train$Embarked),]$Embarked <- 'S'
+```
+
+### Women and children first policy
+Also I added a new feature indicating whether a person is a female or under age 12.
+```{r}
+extractPolicy <- function(data) {
+    plc <- rep(0, length(data$Sex))
+    plc[data$Sex == 'female' | data$Age < 12] <- 1
+    factor(plc)
+}
+train$Plc <- extractPolicy(train)
+chisq.test(table(train$Plc, train$Survived))
+```
+I conducted the chi-square test on the new feature, since p-value is smaller than **.05**, we can reject the null hypothesis that the policy feature is independent of the survive rate.
+
+### Family feature
+I added **SibSp** and **Parch** together to form a new feature indicating the number of family members.
+```{r}
+extractFamily <- function(data) {
+    data$SibSp + data$Parch
+}
+train$Family <- extractFamily(train)
+```
+
+## Model Fitting and tuning
+
+### fit model
+First, I will use all the variable(except **SipSp** and **Parch**, instead I used the **Family** feature to represent) to train a logistic regression model.
+```{r}
+train.model <- glm(Survived ~ Pclass + Sex + Age + Title + 
+                       Plc + Fare + Embarked + Family, data = train, 
+                   family = binomial(link=logit))
+summary(train.model)
+```
+
+From the summary we can see, only a few of variables has passed the **z-test**, which are **Pclass**, **SibSp** and **Parch**. For others, we can not reject the null hypothesis that the corresponding coefficient being zero.
+
+### Model Selection based on AIC
+So next I conducted feature selection based on AIC.
+```{r}
+step(train.model, trace = 0)
+```
+Ok, so I trained next model based on AIC suggestion.
+```{r}
+train.model <- glm(formula = Survived ~ Pclass + Sex + Age + 
+                Title + Fare + Family, family = binomial(link = logit), 
+                   data = train)
+summary(train.model)
+```
+From the summary we can see, Title **Mr** and **Upper Class** seem to be a good indicator, but other titles are not. So I am going to drop **Miss** and **Mrs**. Also, **fare** and **Sex** can be dropped.
+
+
+```{r}
+train.model <- glm(formula = Survived ~ Pclass + Age + 
+                       I(Title=="Mr") + I(Title=="Upper Class") + 
+                       Family, family = binomial(link = logit), 
+                   data = train)
+summary(train.model)
+```
+
+### Confusion Matrix
+Finally I build a confusion matrix.
+```{r}
+Survived <- predict(train.model, newdata = train, type="response")
+predictions <- as.data.frame(Survived)
+predictions$Survived <- sapply(predictions$Survived, 
+                               function(x) {ifelse(x >= 0.5, 
+                                                   "Predicted Survived", 
+                                                   "Predicted Not Survived")})
+predictions$Truth <- train$Survived
+prop.table(table(predictions$Truth, predictions$Survived), 2)
+```
+
+
+## Submit Result
+The following script does the same processing procedures on test dataset, and save the prediction to csv file.
+```{r}
+test <- readData('./test.csv')
+test$Title <- extractTitle(test)
+test$Title <- groupTitle(test, c("Capt", "Col", "Don", 
+                                 "Dr", "Jonkheer", "Lady", 
+                                 "Major", "Rev", "Sir"), "Upper Class")
+test$Title <- groupTitle(test, c("the Countess", "Ms"), "Mrs")
+test$Title <- groupTitle(test, c("Mlle", "Mme"), "Miss")
+test$Age <- imputeAge(test)
+test$Family <- extractFamily(test)
+# use probability 0.5 as a threshold.
+Survived <- predict(train.model, newdata = test, type="response")
+predictions <- as.data.frame(Survived)
+predictions$PassengerId <- test[,1]
+predictions$Survived <- sapply(predictions$Survived, function(x) {ifelse(x >= 0.5, 1, 0)})
+
+write.csv(predictions, file='result.csv', row.names=F, quote=F)
+```
+I achieved **0.78947** accurancy rate on kaggle's data.

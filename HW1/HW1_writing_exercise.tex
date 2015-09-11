@@ -1,0 +1,81 @@
+\documentclass[a4paper]{article}
+\usepackage{amsmath,amssymb,mathtools,bm,etoolbox}
+
+\newcommand{\E}{\mathrm{E}}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\newcommand{\Mypr}{\mathrm{Pr}}
+
+\begin{document}
+\begin{center}
+\textbf{\huge Writing Exercise}
+\end{center}
+\section{Exercise 1}
+\texttt{Pf:}
+\begin{eqnarray*}
+	\Var{(X+Y)} &=& \E{(X+Y-\E{(X)}-\E{(Y)})}^2 \\
+	&=&\E{((X-\E{(X)})+(Y-\E{(Y)}))}^2 \\
+	&=&\E{(X-\E{(X)})}^2 + \E{(Y-\E{(Y)})}^2  + 2\E{(X-\E{(X)})}\E{(Y-\E{(Y)})}      \\
+	&=&\Var{(X)} + \Var{(Y)} + 2\Cov{(X,Y)} \\
+\end{eqnarray*}
+\texttt{Q.E.D}
+
+\section{Exercise 2}
+\texttt{Solve:}
+\begin{eqnarray*}
+	A &=& \text{Have the disease} \\
+	B &=& \text{Test positive} \\
+	\Mypr{(B \mid A)} &=&  \Mypr{(\text{not }B \mid \text{not }A)} = 0.99 \\
+	\Mypr{(A)} &=& 0.0001 \\	
+	\Mypr{(B)} &=&  \Mypr{(B \mid A)}\Mypr{(A)} + \Mypr{(B \mid \text{not }A)}\Mypr{(\text{not }A)}\\
+	&=& \Mypr{(B \mid A)}\Mypr{(A)} + (1-\Mypr{(\text{not }B \mid \text{not }A)})(1-\Mypr{(A)})\\
+	&=& 0.99 \cdot 0.0001 + (1-0.99)(1-0.0001) \\
+	&=& 0.010098 \\
+	\Mypr{(A \mid B)} &=& \frac{\Mypr{(B \mid A)}\Mypr{(A)}}{\Mypr{(B)}} \\
+	&=& \frac{0.99 \cdot 0.0001 }{0.010098} \\
+	& \approx & 0.0098 \\
+	& < & 1.0\%
+\end{eqnarray*}
+
+\newcommand{\der}{\mathrm{d}}
+\newcommand{\Myl}{\mathit{l}}
+\section{Exercise 3}
+\begin{enumerate}
+\item{(a)}
+\texttt{Pf:}
+\begin{eqnarray*}
+	\frac{\der{\sigma(a)}}{\der{(a)}} &=& \frac{0 + -e^{-a}}{(1+e^{-a})^2}\\
+	&=& \frac{-e^{-a}}{(1+e^{-a})^2}\\
+	&=& \frac{1}{1+e^{-a}}(1-\frac{1}{1+e^{-a}})\\
+	&=& \sigma{(a)}(1-\sigma{(a)})\\
+\end{eqnarray*}
+\texttt{Q.E.D}
+\item{(b)}
+\texttt{Pf:}
+\begin{eqnarray*}
+	\Myl{(\beta)} &=& \sum_{i=1}^{N}\{y_i{\beta}^{T}x_i - log(1+e^{{\beta}^{T}x_i})  \}\\
+	\frac{\partial{\Myl{(\beta)} }}{\partial \beta} &=& \sum_{i=1}^{N}\{ x_i y_i - \frac{x_i e^{{\beta}^{T}x_i}}{1+e^{{{\beta}^{T}x_i}}} \}\\
+	&=&  \sum_{i=1}^{N} x_i(y_i - \frac{e^{{\beta}^{T}x_i}}{1+e^{{{\beta}^{T}x_i}}})\\
+	&=&  \sum_{i=1}^{N} x_i(y_i - p(x_i;\beta))
+\end{eqnarray*}
+\texttt{Q.E.D}
+\item{(c)}
+\texttt{Pf:}
+\begin{eqnarray*}
+	\text{Let } z &=& \left[ \begin{array}{c} z_0 \\ z_1\\ \vdots \\z_p \end{array} \right] \\
+	X  &=& \begin{bmatrix} 1 & x_{11} & \cdots & x_{1p} \\ 1 & x_{21}  & \cdots & x_{2p}\\ \vdots & \vdots & \ddots & \vdots \\ 1 & x_{N1} & \cdots & x_{Np} \end{bmatrix}  =  \left[ \begin{array}{c} X_1 \\ X_2\\ \vdots \\X_N \end{array} \right]\\
+	W &=& \begin{bmatrix} w_{11} & 0 & \cdots & 0 \\ 0 & w_{22}  & \cdots & 0\\ \vdots & \vdots & \ddots & \vdots \\ 0 & 0 & \cdots & w_{NN} \end{bmatrix}\\
+	\text{As for any non-zero vector } z \text{ has:}\\ 
+	z^T (X^T W X) z &=& (X z)^T W (X z)\\
+	&=& \left[ \begin{array}{c} z \cdot X_1  \\ z \cdot X_2 \\ \vdots \\z \cdot X_N \end{array} \right]^T  \times \begin{bmatrix} w_{11} & 0 & \cdots & 0 \\ 0 & w_{22}  & \cdots & 0\\ \vdots & \vdots & \ddots & \vdots \\ 0 & 0 & \cdots & w_{NN} \end{bmatrix}\ \times \left[ \begin{array}{c} z \cdot X_1  \\ z \cdot X_2 \\ \vdots \\z \cdot X_N \end{array} \right] \\
+	&=& \sum_{i=1}^Nw_{ii}(z \cdot X_i)^2 \\
+	\because w_{ii} &=& p(x_i;\beta)(1-p(x_i;\beta)) \\
+	\therefore \text{All } w_{ii} &>& 0\\
+	\therefore z^T (X^T W X) z &>& 0\\
+	\therefore X^T W X  \text{ is positive definite.}
+\end{eqnarray*}
+
+\texttt{Q.E.D}
+
+\end{enumerate}
+\end{document}

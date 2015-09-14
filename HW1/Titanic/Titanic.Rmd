@@ -203,3 +203,5 @@ predictions$Survived <- sapply(predictions$Survived, function(x) {ifelse(x >= 0.
 write.csv(predictions, file='result.csv', row.names=F, quote=F)
 ```
 I achieved **0.78947** accurancy rate on kaggle's data.
+
+![ScreenShot](./ScreenShot)

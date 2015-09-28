@@ -1,0 +1,28 @@
+\documentclass[a4paper]{article}
+\usepackage{amsmath,amssymb,mathtools,bm,etoolbox}
+
+\begin{document}
+\title{Writing Exercise}
+\author{Bochen Wang\\Tianyuan Liu}
+\maketitle
+\section{Exercise 4.1}
+\subsection{}
+\begin{center}
+$\underset{a}{\max } \{a^TBa \}$\\
+s.b.t $a^TWa = 1$ \\	
+\end{center}
+corresponding to the lagrangian \\	
+\begin{eqnarray*}
+	L_P &=& a^TBa - \lambda(a^TWa-1)\\
+	\text{Let }\frac{\partial{L_P}}{\partial{a}} &=& 2Ba-2\lambda Wa = 0\\
+	W^{-1}Ba &=& \lambda a\\
+\end{eqnarray*}
+$\therefore$ a is a eigenvector of $W^{-1}B$\\
+\begin{eqnarray*}
+	\because Ba &=& \lambda Wa \\
+	\therefore a^TBa &=& \lambda a^TWa \\
+	\because a^TWa &=& 1 \\
+	\therefore a^TBa &=& \lambda \\		
+\end{eqnarray*}
+$\therefore$ a is the eigenvector corresponding to the biggest eigenvalue of $W^{-1}B$\\
+\end{document}
